@@ -82,6 +82,12 @@ static void abr_apply_mode_preset(adaptive_bitrate_service_t *service) {
             }
             break;
     }
+    /* The 150 Mbps preset cap must never sit below the user's own setting:
+     * with a 200-300 Mbps stream the first loss-free tick would otherwise
+     * clamp the bitrate straight down to 150 Mbps. */
+    if (service->max_bitrate < service->initial_bitrate) {
+        service->max_bitrate = service->initial_bitrate;
+    }
     /* Low initial bitrates can invert the presets (e.g. QUALITY at 3000 kbps
      * gives min=5000 > max=4500); the tick's clamp order would then RAISE the
      * bitrate above the user's setting. Normalize so max always wins. */
