@@ -262,7 +262,9 @@ static void launcher_refresh_profile_dropdown(launcher_fragment_t *controller) {
     if (!controller->profile_dropdown) {
         return;
     }
-    char options[512] = {0};
+    /* Up to 16 profiles x 63-char names, plus separators: 512 bytes overflowed. */
+    char options[16 * 64 + 64] = {0};
+    size_t used = 0;
     int active_index = 0;
     const char *active_id = profile_manager_active_id();
     for (int i = 0; i < profile_manager_count(); i++) {
@@ -270,11 +272,13 @@ static void launcher_refresh_profile_dropdown(launcher_fragment_t *controller) {
         if (!profile) {
             continue;
         }
-        if (i > 0) {
-            strcat(options, "\n");
-        }
         // profile_manager stores the built-in profile as "Default"; translate it only while it keeps that name.
-        strcat(options, strcmp(profile->name, "Default") == 0 ? locstr("Default") : profile->name);
+        const char *label = strcmp(profile->name, "Default") == 0 ? locstr("Default") : profile->name;
+        int n = snprintf(options + used, sizeof(options) - used, "%s%s", i > 0 ? "\n" : "", label);
+        if (n < 0 || (size_t) n >= sizeof(options) - used) {
+            break;
+        }
+        used += (size_t) n;
         if (active_id && strcmp(profile->id, active_id) == 0) {
             active_index = i;
         }
